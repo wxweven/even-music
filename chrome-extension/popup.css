@@ -1,0 +1,140 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 360px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f8f9fa;
+  color: #333;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  padding: 14px 16px;
+}
+
+.header h1 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+#content {
+  padding: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.loading, .empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: #888;
+  font-size: 13px;
+}
+
+.song-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.song-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #eee;
+}
+
+.song-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.song-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.song-artist {
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.btn {
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  opacity: 0.85;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-download {
+  background: #667eea;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.btn-retry {
+  background: #e74c3c;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.status-text {
+  font-size: 11px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.status-done {
+  color: #27ae60;
+  font-weight: 600;
+}
+
+.status-error {
+  color: #e74c3c;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid #eee;
+  background: #fff;
+}
+
+.btn-primary {
+  background: #667eea;
+  color: #fff;
+  flex: 1;
+}
+
+.btn-secondary {
+  background: #eee;
+  color: #555;
+}
