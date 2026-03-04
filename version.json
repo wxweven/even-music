@@ -1,7 +1,7 @@
 {
-  "versionCode": 3,
-  "versionName": "1.1.1",
-  "apkUrl": "https://github.com/wxweven/even-music/releases/download/v1.1.1/even-music-release.apk",
-  "changelog": "- 详情页 UI 优化：封面尺寸调整，歌曲名与歌手名同行显示\n- 详情页间距优化，信息展示更紧凑",
+  "versionCode": 4,
+  "versionName": "1.1.2",
+  "apkUrl": "https://github.com/wxweven/even-music/releases/download/v1.1.2/even-music-release.apk",
+  "changelog": "- 新增设置页面，支持查看版本号和检查更新\n- 新增项目地址入口\n- 优化底部导航栏状态保存逻辑",
   "forceUpdate": false
 }

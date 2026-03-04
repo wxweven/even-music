@@ -43,6 +43,7 @@ import com.getmusic.hifiti.ui.detail.DetailScreen
 import com.getmusic.hifiti.ui.my.MyScreen
 import com.getmusic.hifiti.ui.player.MiniPlayerBar
 import com.getmusic.hifiti.ui.search.SearchScreen
+import com.getmusic.hifiti.ui.settings.SettingsScreen
 import com.getmusic.hifiti.ui.theme.HiFiTiTheme
 import com.getmusic.hifiti.ui.update.UpdateDialog
 import com.getmusic.hifiti.update.AppUpdater
@@ -127,6 +128,7 @@ fun HiFiTiApp(playerManager: MusicPlayerManager) {
     }
 
     val isDetailRoute = currentRoute == "detail/{threadId}"
+    val isOnTabRoute = currentRoute == "search" || currentRoute == "my"
 
     Scaffold(
         bottomBar = {
@@ -153,10 +155,10 @@ fun HiFiTiApp(playerManager: MusicPlayerManager) {
                         onClick = {
                             navController.navigate("search") {
                                 popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                                    saveState = isOnTabRoute
                                 }
                                 launchSingleTop = true
-                                restoreState = true
+                                restoreState = isOnTabRoute
                             }
                         },
                         icon = { Icon(Icons.Default.Home, contentDescription = "首页") },
@@ -167,10 +169,10 @@ fun HiFiTiApp(playerManager: MusicPlayerManager) {
                         onClick = {
                             navController.navigate("my") {
                                 popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                                    saveState = isOnTabRoute
                                 }
                                 launchSingleTop = true
-                                restoreState = true
+                                restoreState = isOnTabRoute
                             }
                         },
                         icon = { Icon(Icons.Default.Person, contentDescription = "我的") },
@@ -203,7 +205,18 @@ fun HiFiTiApp(playerManager: MusicPlayerManager) {
                             navController.navigate("detail/$threadId") {
                                 launchSingleTop = true
                             }
+                        },
+                        onNavigateToSettings = {
+                            navController.navigate("settings") {
+                                launchSingleTop = true
+                            }
                         }
+                    )
+                }
+
+                composable("settings") {
+                    SettingsScreen(
+                        onBack = { navController.popBackStack() }
                     )
                 }
 

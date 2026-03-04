@@ -37,8 +37,8 @@ android {
         applicationId = "com.getmusic.hifiti"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.1.1"
+        versionCode = 4
+        versionName = "1.1.2"
 
         buildConfigField("String", "UPDATE_URL", "\"https://raw.githubusercontent.com/wxweven/even-music/master/version.json\"")
     }

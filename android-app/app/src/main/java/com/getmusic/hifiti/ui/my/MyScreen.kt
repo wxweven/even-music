@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,6 +46,7 @@ import java.util.Locale
 @Composable
 fun MyScreen(
     onNavigateToDetail: (String) -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     viewModel: MyViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -169,6 +171,9 @@ fun MyScreen(
                                 contentDescription = "清空播放历史"
                             )
                         }
+                    }
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "设置")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
