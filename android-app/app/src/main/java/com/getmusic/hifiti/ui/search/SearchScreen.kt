@@ -9,7 +9,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -27,7 +26,6 @@ import com.getmusic.hifiti.data.SearchItem
 @Composable
 fun SearchScreen(
     onItemClick: (SearchItem) -> Unit,
-    onNavigateToFavorites: () -> Unit,
     viewModel: SearchViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -37,15 +35,6 @@ fun SearchScreen(
         topBar = {
             TopAppBar(
                 title = { Text("HiFiTi 音乐") },
-                actions = {
-                    IconButton(onClick = onNavigateToFavorites) {
-                        Icon(
-                            Icons.Default.Favorite,
-                            contentDescription = "我的收藏",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer

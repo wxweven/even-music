@@ -3,6 +3,7 @@ package com.getmusic.hifiti.ui.detail
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -27,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -96,6 +98,7 @@ fun DetailScreen(
                     onSeek = viewModel::seekTo,
                     onSkipNext = viewModel::skipToNext,
                     onSkipPrevious = viewModel::skipToPrevious,
+                    onCyclePlayMode = viewModel::cyclePlayMode,
                     onDownload = viewModel::download,
                     onOpenPlayer = viewModel::openInMusicApp,
                     onToggleFavorite = viewModel::toggleFavorite
@@ -131,6 +134,7 @@ private fun SongDetailContent(
     onSeek: (Long) -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
+    onCyclePlayMode: () -> Unit,
     onDownload: () -> Unit,
     onOpenPlayer: () -> Unit,
     onToggleFavorite: () -> Unit
@@ -164,6 +168,7 @@ private fun SongDetailContent(
                     onSeek = onSeek,
                     onSkipNext = onSkipNext,
                     onSkipPrevious = onSkipPrevious,
+                    onCyclePlayMode = onCyclePlayMode,
                     onDownload = onDownload,
                     onOpenPlayer = onOpenPlayer,
                     onToggleFavorite = onToggleFavorite
@@ -213,6 +218,7 @@ private fun CoverPage(
     onSeek: (Long) -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
+    onCyclePlayMode: () -> Unit,
     onDownload: () -> Unit,
     onOpenPlayer: () -> Unit,
     onToggleFavorite: () -> Unit
@@ -227,15 +233,17 @@ private fun CoverPage(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(modifier = Modifier.height(8.dp))
+
         if (detail.coverUrl.isNotEmpty()) {
             AsyncImage(
                 model = detail.coverUrl,
                 contentDescription = "专辑封面",
                 modifier = Modifier
-                    .size(220.dp)
+                    .size(240.dp)
                     .clip(RoundedCornerShape(16.dp)),
                 contentScale = ContentScale.Crop
             )
@@ -247,30 +255,18 @@ private fun CoverPage(
                 pageCount = pageCount,
                 currentPage = currentPage
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = detail.songName,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f, fill = false)
-            )
-            IconButton(onClick = onToggleFavorite) {
-                Icon(
-                    imageVector = if (uiState.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (uiState.isFavorite) "取消收藏" else "收藏",
-                    tint = if (uiState.isFavorite) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
+        Text(
+            text = detail.songName,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = detail.artist,
             style = MaterialTheme.typography.titleMedium,
@@ -278,104 +274,27 @@ private fun CoverPage(
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Player controls
-        if (isCurrentSong) {
-            PlayerControls(
-                playerState = playerState,
-                onPlayPause = onTogglePlayPause,
-                onSeek = onSeek,
-                onSkipNext = onSkipNext,
-                onSkipPrevious = onSkipPrevious
-            )
-        } else {
-            Button(
-                onClick = onPlay,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("播放", style = MaterialTheme.typography.titleSmall)
-            }
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Download button area
-        when {
-            uiState.downloadCompleted -> {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = {},
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = false
-                    ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("已下载", style = MaterialTheme.typography.bodyMedium)
-                    }
+        ActionIconRow(
+            uiState = uiState,
+            animatedProgress = animatedProgress,
+            onToggleFavorite = onToggleFavorite,
+            onDownload = onDownload,
+            onOpenPlayer = onOpenPlayer
+        )
 
-                    OutlinedButton(
-                        onClick = onOpenPlayer,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("用音乐App打开", style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-            }
+        Spacer(modifier = Modifier.height(20.dp))
 
-            uiState.isDownloading -> {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    LinearProgressIndicator(
-                        progress = { animatedProgress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "下载中 ${(animatedProgress * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+        PlayerControls(
+            playerState = if (isCurrentSong) playerState else PlayerState(),
+            onPlayPause = { if (isCurrentSong) onTogglePlayPause() else onPlay() },
+            onSeek = onSeek,
+            onSkipNext = onSkipNext,
+            onSkipPrevious = onSkipPrevious,
+            onCyclePlayMode = onCyclePlayMode
+        )
 
-            else -> {
-                OutlinedButton(
-                    onClick = onDownload,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("下载到本地", style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        }
-
-        // Download error
         if (uiState.downloadError != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -385,7 +304,123 @@ private fun CoverPage(
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun ActionIconRow(
+    uiState: DetailUiState,
+    animatedProgress: Float,
+    onToggleFavorite: () -> Unit,
+    onDownload: () -> Unit,
+    onOpenPlayer: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ActionIconItem(
+            icon = {
+                Icon(
+                    imageVector = if (uiState.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = null,
+                    tint = if (uiState.isFavorite) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
+                )
+            },
+            label = if (uiState.isFavorite) "已收藏" else "收藏",
+            onClick = onToggleFavorite
+        )
+
+        Spacer(modifier = Modifier.width(32.dp))
+
+        when {
+            uiState.isDownloading -> {
+                ActionIconItem(
+                    icon = {
+                        Box(contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                progress = { animatedProgress },
+                                modifier = Modifier.size(22.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    },
+                    label = "${(animatedProgress * 100).toInt()}%",
+                    onClick = {}
+                )
+            }
+            uiState.downloadCompleted -> {
+                ActionIconItem(
+                    icon = {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    },
+                    label = "已下载",
+                    onClick = {}
+                )
+            }
+            else -> {
+                ActionIconItem(
+                    icon = {
+                        Icon(
+                            Icons.Default.Download,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    },
+                    label = "下载",
+                    onClick = onDownload
+                )
+            }
+        }
+
+        if (uiState.downloadCompleted) {
+            Spacer(modifier = Modifier.width(32.dp))
+
+            ActionIconItem(
+                icon = {
+                    Icon(
+                        Icons.AutoMirrored.Filled.OpenInNew,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                },
+                label = "打开",
+                onClick = onOpenPlayer
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionIconItem(
+    icon: @Composable () -> Unit,
+    label: String,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+    ) {
+        icon()
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

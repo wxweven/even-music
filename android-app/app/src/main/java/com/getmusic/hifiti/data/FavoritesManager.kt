@@ -79,6 +79,59 @@ class FavoritesManager(context: Context) {
         prefs.edit().putString(KEY_FAVORITES, array.toString()).apply()
     }
 
+    fun exportToJson(): String {
+        val songs = getAll()
+        val songsArray = JSONArray()
+        songs.forEach { song ->
+            songsArray.put(JSONObject().apply {
+                put("threadId", song.threadId)
+                put("title", song.title)
+                put("artist", song.artist)
+                put("coverUrl", song.coverUrl)
+                put("audioUrl", song.audioUrl)
+                put("addedAt", song.addedAt)
+            })
+        }
+        return JSONObject().apply {
+            put("version", 1)
+            put("exportTime", System.currentTimeMillis())
+            put("songs", songsArray)
+        }.toString(2)
+    }
+
+    fun parseFromJson(json: String): List<FavoriteSong> {
+        val root = JSONObject(json)
+        val songsArray = root.getJSONArray("songs")
+        return (0 until songsArray.length()).map { i ->
+            val obj = songsArray.getJSONObject(i)
+            FavoriteSong(
+                threadId = obj.getString("threadId"),
+                title = obj.getString("title"),
+                artist = obj.getString("artist"),
+                coverUrl = obj.optString("coverUrl", ""),
+                audioUrl = obj.optString("audioUrl", ""),
+                addedAt = obj.optLong("addedAt", 0L)
+            )
+        }
+    }
+
+    /**
+     * @return 实际新增的歌曲数量
+     */
+    fun importSongs(songs: List<FavoriteSong>, replace: Boolean): Int {
+        if (replace) {
+            save(songs.sortedByDescending { it.addedAt })
+            return songs.size
+        }
+        val existing = getAll()
+        val existingIds = existing.map { it.threadId }.toSet()
+        val newSongs = songs.filter { it.threadId !in existingIds }
+        if (newSongs.isNotEmpty()) {
+            save((existing + newSongs).sortedByDescending { it.addedAt })
+        }
+        return newSongs.size
+    }
+
     companion object {
         private const val KEY_FAVORITES = "favorites_list"
     }

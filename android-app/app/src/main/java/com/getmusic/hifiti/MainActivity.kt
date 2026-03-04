@@ -9,9 +9,17 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,14 +31,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.getmusic.hifiti.player.MusicPlayerManager
 import com.getmusic.hifiti.ui.detail.DetailScreen
-import com.getmusic.hifiti.ui.favorites.FavoritesScreen
+import com.getmusic.hifiti.ui.my.MyScreen
 import com.getmusic.hifiti.ui.player.MiniPlayerBar
 import com.getmusic.hifiti.ui.search.SearchScreen
 import com.getmusic.hifiti.ui.theme.HiFiTiTheme
@@ -75,6 +85,8 @@ class MainActivity : ComponentActivity() {
 fun HiFiTiApp(playerManager: MusicPlayerManager) {
     val navController = rememberNavController()
     val playerState by playerManager.playerState.collectAsState()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -114,21 +126,58 @@ fun HiFiTiApp(playerManager: MusicPlayerManager) {
         )
     }
 
+    val isDetailRoute = currentRoute == "detail/{threadId}"
+
     Scaffold(
         bottomBar = {
-            MiniPlayerBar(
-                playerState = playerState,
-                onPlayPause = { playerManager.togglePlayPause() },
-                onClose = { playerManager.stop() },
-                onClick = {
-                    val threadId = playerState.currentSong?.threadId
-                    if (!threadId.isNullOrEmpty()) {
-                        navController.navigate("detail/$threadId") {
-                            launchSingleTop = true
+            Column {
+                if (!isDetailRoute) {
+                    MiniPlayerBar(
+                        playerState = playerState,
+                        onPlayPause = { playerManager.togglePlayPause() },
+                        onClose = { playerManager.stop() },
+                        onClick = {
+                            val threadId = playerState.currentSong?.threadId
+                            if (!threadId.isNullOrEmpty()) {
+                                navController.navigate("detail/$threadId") {
+                                    launchSingleTop = true
+                                }
+                            }
                         }
-                    }
+                    )
                 }
-            )
+
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = currentRoute == "search",
+                        onClick = {
+                            navController.navigate("search") {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = { Icon(Icons.Default.Home, contentDescription = "首页") },
+                        label = { Text("首页") }
+                    )
+                    NavigationBarItem(
+                        selected = currentRoute == "my",
+                        onClick = {
+                            navController.navigate("my") {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = { Icon(Icons.Default.Person, contentDescription = "我的") },
+                        label = { Text("我的") }
+                    )
+                }
+            }
         }
     ) { paddingValues ->
         Box(
@@ -144,18 +193,16 @@ fun HiFiTiApp(playerManager: MusicPlayerManager) {
                     SearchScreen(
                         onItemClick = { item ->
                             navController.navigate("detail/${item.threadId}")
-                        },
-                        onNavigateToFavorites = {
-                            navController.navigate("favorites")
                         }
                     )
                 }
 
-                composable("favorites") {
-                    FavoritesScreen(
-                        onBack = { navController.popBackStack() },
-                        onItemClick = { threadId ->
-                            navController.navigate("detail/$threadId")
+                composable("my") {
+                    MyScreen(
+                        onNavigateToDetail = { threadId ->
+                            navController.navigate("detail/$threadId") {
+                                launchSingleTop = true
+                            }
                         }
                     )
                 }

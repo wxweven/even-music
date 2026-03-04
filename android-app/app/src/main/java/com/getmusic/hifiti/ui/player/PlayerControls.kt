@@ -1,18 +1,24 @@
 package com.getmusic.hifiti.ui.player
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.getmusic.hifiti.player.PlayMode
 import com.getmusic.hifiti.player.PlayerState
 
 @Composable
@@ -22,6 +28,7 @@ fun PlayerControls(
     onSeek: (Long) -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
+    onCyclePlayMode: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var isSeeking by remember { mutableStateOf(false) }
@@ -88,6 +95,31 @@ fun PlayerControls(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                val context = LocalContext.current
+                IconButton(
+                    onClick = {
+                        onCyclePlayMode()
+                        val modeName = when (playerState.playMode) {
+                            PlayMode.SEQUENTIAL -> "随机播放"
+                            PlayMode.SHUFFLE -> "单曲循环"
+                            PlayMode.REPEAT_ONE -> "顺序播放"
+                        }
+                        Toast.makeText(context, modeName, Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Icon(
+                        imageVector = when (playerState.playMode) {
+                            PlayMode.SEQUENTIAL -> Icons.Default.Repeat
+                            PlayMode.SHUFFLE -> Icons.Default.Shuffle
+                            PlayMode.REPEAT_ONE -> Icons.Default.RepeatOne
+                        },
+                        contentDescription = "播放模式",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 IconButton(
                     onClick = onSkipPrevious,
                     enabled = playerState.hasPrevious
@@ -133,6 +165,10 @@ fun PlayerControls(
                         modifier = Modifier.size(32.dp)
                     )
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Spacer(modifier = Modifier.size(48.dp))
             }
         }
     }

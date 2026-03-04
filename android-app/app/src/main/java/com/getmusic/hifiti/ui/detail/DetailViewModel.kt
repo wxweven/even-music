@@ -9,6 +9,7 @@ import com.getmusic.hifiti.data.FavoriteSong
 import com.getmusic.hifiti.data.FavoritesManager
 import com.getmusic.hifiti.data.HiFiTiApi
 import com.getmusic.hifiti.data.SongDetail
+import com.getmusic.hifiti.data.SongDetailCache
 import com.getmusic.hifiti.player.MusicPlayerManager
 import com.getmusic.hifiti.player.PlayerState
 import com.getmusic.hifiti.player.SongInfo
@@ -16,6 +17,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -37,6 +41,7 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
     private val api = HiFiTiApi()
     private val downloader = MusicDownloader(application)
     private val favoritesManager = FavoritesManager(application)
+    private val detailCache = SongDetailCache(application)
     val playerManager = MusicPlayerManager.getInstance(application)
 
     private val _uiState = MutableStateFlow(DetailUiState())
@@ -47,24 +52,96 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
 
     private var currentThreadId: String = ""
 
+    init {
+        viewModelScope.launch {
+            playerManager.playerState
+                .map { it.currentSong }
+                .filterNotNull()
+                .distinctUntilChangedBy { it.threadId }
+                .collect { song ->
+                    if (song.threadId.isNotEmpty() && song.threadId != currentThreadId) {
+                        loadDetailForSongTransition(song)
+                    }
+                }
+        }
+    }
+
     fun loadDetail(threadId: String) {
         currentThreadId = threadId
+
+        val cached = detailCache.get(threadId)
+        if (cached != null) {
+            val audioUrl = cached.realAudioUrl ?: cached.audioUrl
+            val alreadyDownloaded = audioUrl.isNotEmpty() && downloader.isDownloaded(audioUrl)
+            _uiState.value = DetailUiState(
+                isLoading = false,
+                songDetail = cached,
+                downloadCompleted = alreadyDownloaded,
+                downloadedUri = if (alreadyDownloaded) downloader.getDownloadedUri(audioUrl) else null,
+                isFavorite = favoritesManager.isFavorite(threadId)
+            )
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = DetailUiState(isLoading = true)
+            fetchDetail(threadId)
+        }
+    }
 
-            try {
-                val detail = api.getDetail(threadId)
-                val audioUrl = detail.realAudioUrl ?: detail.audioUrl
-                val alreadyDownloaded = audioUrl.isNotEmpty() && downloader.isDownloaded(audioUrl)
+    private fun loadDetailForSongTransition(song: SongInfo) {
+        currentThreadId = song.threadId
 
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    songDetail = detail,
-                    downloadCompleted = alreadyDownloaded,
-                    downloadedUri = if (alreadyDownloaded) downloader.getDownloadedUri(audioUrl) else null,
-                    isFavorite = favoritesManager.isFavorite(threadId)
-                )
-            } catch (e: Exception) {
+        val cached = detailCache.get(song.threadId)
+        if (cached != null) {
+            val audioUrl = cached.realAudioUrl ?: cached.audioUrl
+            val alreadyDownloaded = audioUrl.isNotEmpty() && downloader.isDownloaded(audioUrl)
+            _uiState.value = DetailUiState(
+                isLoading = false,
+                songDetail = cached,
+                downloadCompleted = alreadyDownloaded,
+                downloadedUri = if (alreadyDownloaded) downloader.getDownloadedUri(audioUrl) else null,
+                isFavorite = favoritesManager.isFavorite(song.threadId)
+            )
+            return
+        }
+
+        val placeholder = SongDetail(
+            songName = song.title,
+            artist = song.artist,
+            audioUrl = song.audioUrl,
+            coverUrl = song.coverUrl,
+            lyrics = null,
+            realAudioUrl = song.audioUrl
+        )
+        _uiState.value = DetailUiState(
+            isLoading = false,
+            songDetail = placeholder,
+            isFavorite = favoritesManager.isFavorite(song.threadId)
+        )
+        viewModelScope.launch {
+            fetchDetail(song.threadId)
+        }
+    }
+
+    private suspend fun fetchDetail(threadId: String) {
+        try {
+            val detail = api.getDetail(threadId)
+            detailCache.put(threadId, detail)
+
+            val audioUrl = detail.realAudioUrl ?: detail.audioUrl
+            val alreadyDownloaded = audioUrl.isNotEmpty() && downloader.isDownloaded(audioUrl)
+
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                songDetail = detail,
+                error = null,
+                downloadCompleted = alreadyDownloaded,
+                downloadedUri = if (alreadyDownloaded) downloader.getDownloadedUri(audioUrl) else null,
+                isFavorite = favoritesManager.isFavorite(threadId)
+            )
+        } catch (e: Exception) {
+            if (_uiState.value.songDetail == null) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "加载失败"
@@ -106,6 +183,10 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
 
     fun skipToPrevious() {
         playerManager.skipToPrevious()
+    }
+
+    fun cyclePlayMode() {
+        playerManager.cyclePlayMode()
     }
 
     fun download() {

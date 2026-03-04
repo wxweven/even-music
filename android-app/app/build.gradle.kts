@@ -21,12 +21,15 @@ android {
     namespace = "com.getmusic.hifiti"
     compileSdk = 34
 
-    signingConfigs {
-        create("release") {
-            storeFile = file(localProperties.getProperty("RELEASE_STORE_FILE", ""))
-            storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD", "")
-            keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS", "")
-            keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD", "")
+    val releaseStoreFile = localProperties.getProperty("RELEASE_STORE_FILE", "")
+    if (releaseStoreFile.isNotEmpty()) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD", "")
+                keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS", "")
+                keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD", "")
+            }
         }
     }
 
@@ -43,7 +46,9 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            if (releaseStoreFile.isNotEmpty()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -96,9 +101,11 @@ dependencies {
     // Image loading
     implementation("io.coil-kt:coil-compose:2.6.0")
 
-    // Media3 (ExoPlayer + MediaSession)
+    // Media3 (ExoPlayer + MediaSession + Cache)
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-session:1.3.1")
+    implementation("androidx.media3:media3-datasource:1.3.1")
+    implementation("androidx.media3:media3-database:1.3.1")
 
     // Core
     implementation("androidx.core:core-ktx:1.12.0")

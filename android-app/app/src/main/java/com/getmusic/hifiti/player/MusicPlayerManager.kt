@@ -11,6 +11,9 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.getmusic.hifiti.MusicDownloader
+import com.getmusic.hifiti.data.PlayHistoryItem
+import com.getmusic.hifiti.data.PlayHistoryManager
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +32,10 @@ data class SongInfo(
     val threadId: String = ""
 )
 
+enum class PlaylistSource { FAVORITES, HISTORY, SINGLE }
+
+enum class PlayMode { SEQUENTIAL, SHUFFLE, REPEAT_ONE }
+
 data class PlayerState(
     val isPlaying: Boolean = false,
     val currentPosition: Long = 0L,
@@ -38,7 +45,9 @@ data class PlayerState(
     val currentIndex: Int = 0,
     val hasNext: Boolean = false,
     val hasPrevious: Boolean = false,
-    val isBuffering: Boolean = false
+    val isBuffering: Boolean = false,
+    val playlistSource: PlaylistSource = PlaylistSource.SINGLE,
+    val playMode: PlayMode = PlayMode.SEQUENTIAL
 )
 
 class MusicPlayerManager private constructor(private val context: Context) {
@@ -69,6 +78,15 @@ class MusicPlayerManager private constructor(private val context: Context) {
     private val songMap = mutableMapOf<Int, SongInfo>()
 
     private var pendingSong: SongInfo? = null
+    private var pendingPlaylist: Triple<List<SongInfo>, Int, PlaylistSource>? = null
+
+    private val playHistoryManager = PlayHistoryManager(context)
+    private val downloader = MusicDownloader(context)
+
+    private var _playlistSource = PlaylistSource.SINGLE
+    private var _playMode = loadPlayMode()
+
+    private val playModePrefs = context.getSharedPreferences("player_settings", Context.MODE_PRIVATE)
 
     fun connect() {
         if (controller != null || controllerFuture != null) return
@@ -84,7 +102,13 @@ class MusicPlayerManager private constructor(private val context: Context) {
                     try {
                         controller = future.get()
                         controller?.addListener(playerListener)
+                        applyPlayMode(_playMode)
                         startPositionUpdates()
+
+                        pendingPlaylist?.let { (songs, startIndex, source) ->
+                            pendingPlaylist = null
+                            setPlaylist(songs, startIndex, source)
+                        }
 
                         pendingSong?.let { song ->
                             pendingSong = null
@@ -107,6 +131,31 @@ class MusicPlayerManager private constructor(private val context: Context) {
         controllerFuture = null
     }
 
+    fun setPlaylist(songs: List<SongInfo>, startIndex: Int = 0, source: PlaylistSource = PlaylistSource.SINGLE) {
+        val ctrl = controller
+        if (ctrl == null) {
+            pendingPlaylist = Triple(songs, startIndex, source)
+            connect()
+            return
+        }
+
+        _playlistSource = source
+        songMap.clear()
+        ctrl.clearMediaItems()
+
+        val mediaItems = songs.mapIndexed { index, song ->
+            songMap[index] = song
+            buildMediaItem(song)
+        }
+        ctrl.setMediaItems(mediaItems, startIndex, 0L)
+        applyPlayMode(_playMode)
+        ctrl.play()
+
+        if (songs.isNotEmpty() && startIndex in songs.indices) {
+            recordHistory(songs[startIndex])
+        }
+    }
+
     fun play(songInfo: SongInfo) {
         val ctrl = controller
         if (ctrl == null) {
@@ -115,24 +164,17 @@ class MusicPlayerManager private constructor(private val context: Context) {
             return
         }
 
-        val key = songKey(songInfo)
-        val existingIndex = findSongIndex(key)
-        if (existingIndex >= 0) {
-            songMap[existingIndex] = songInfo
-            ctrl.replaceMediaItem(existingIndex, buildMediaItem(songInfo))
-            if (ctrl.currentMediaItemIndex != existingIndex) {
-                ctrl.seekTo(existingIndex, 0)
-            }
-            ctrl.play()
-            return
-        }
+        _playlistSource = PlaylistSource.SINGLE
+        songMap.clear()
+        ctrl.clearMediaItems()
 
         val mediaItem = buildMediaItem(songInfo)
-        val insertIndex = ctrl.mediaItemCount
-        songMap[insertIndex] = songInfo
-        ctrl.addMediaItem(mediaItem)
-        ctrl.seekTo(insertIndex, 0)
+        songMap[0] = songInfo
+        ctrl.setMediaItems(listOf(mediaItem), 0, 0L)
+        applyPlayMode(_playMode)
         ctrl.play()
+
+        recordHistory(songInfo)
     }
 
     fun pause() {
@@ -154,19 +196,86 @@ class MusicPlayerManager private constructor(private val context: Context) {
 
     fun skipToNext() {
         val ctrl = controller ?: return
-        if (ctrl.hasNextMediaItem()) ctrl.seekToNextMediaItem()
+        if (ctrl.hasNextMediaItem()) {
+            ctrl.seekToNextMediaItem()
+        } else if (ctrl.mediaItemCount > 1) {
+            ctrl.seekTo(0, 0)
+        }
     }
 
     fun skipToPrevious() {
         val ctrl = controller ?: return
-        if (ctrl.hasPreviousMediaItem()) ctrl.seekToPreviousMediaItem()
+        if (ctrl.hasPreviousMediaItem()) {
+            ctrl.seekToPreviousMediaItem()
+        } else if (ctrl.mediaItemCount > 1) {
+            ctrl.seekTo(ctrl.mediaItemCount - 1, 0)
+        }
     }
 
     fun stop() {
         controller?.stop()
         controller?.clearMediaItems()
         songMap.clear()
-        _playerState.value = PlayerState()
+        _playlistSource = PlaylistSource.SINGLE
+        _playerState.value = PlayerState(playMode = _playMode)
+    }
+
+    fun cyclePlayMode(): PlayMode {
+        val next = when (_playMode) {
+            PlayMode.SEQUENTIAL -> PlayMode.SHUFFLE
+            PlayMode.SHUFFLE -> PlayMode.REPEAT_ONE
+            PlayMode.REPEAT_ONE -> PlayMode.SEQUENTIAL
+        }
+        setPlayMode(next)
+        return next
+    }
+
+    fun setPlayMode(mode: PlayMode) {
+        _playMode = mode
+        applyPlayMode(mode)
+        savePlayMode(mode)
+        _playerState.value = _playerState.value.copy(playMode = mode)
+    }
+
+    private fun applyPlayMode(mode: PlayMode) {
+        val ctrl = controller ?: return
+        when (mode) {
+            PlayMode.SEQUENTIAL -> {
+                ctrl.repeatMode = Player.REPEAT_MODE_ALL
+                ctrl.shuffleModeEnabled = false
+            }
+            PlayMode.SHUFFLE -> {
+                ctrl.repeatMode = Player.REPEAT_MODE_ALL
+                ctrl.shuffleModeEnabled = true
+            }
+            PlayMode.REPEAT_ONE -> {
+                ctrl.repeatMode = Player.REPEAT_MODE_ONE
+                ctrl.shuffleModeEnabled = false
+            }
+        }
+    }
+
+    private fun loadPlayMode(): PlayMode {
+        val prefs = context.getSharedPreferences("player_settings", Context.MODE_PRIVATE)
+        val name = prefs.getString("play_mode", PlayMode.SEQUENTIAL.name) ?: PlayMode.SEQUENTIAL.name
+        return try { PlayMode.valueOf(name) } catch (_: Exception) { PlayMode.SEQUENTIAL }
+    }
+
+    private fun savePlayMode(mode: PlayMode) {
+        playModePrefs.edit().putString("play_mode", mode.name).apply()
+    }
+
+    private fun recordHistory(songInfo: SongInfo) {
+        if (songInfo.threadId.isEmpty()) return
+        playHistoryManager.record(
+            PlayHistoryItem(
+                threadId = songInfo.threadId,
+                title = songInfo.title,
+                artist = songInfo.artist,
+                coverUrl = songInfo.coverUrl,
+                audioUrl = songInfo.audioUrl
+            )
+        )
     }
 
     private fun songKey(songInfo: SongInfo): String = "${songInfo.title}|${songInfo.artist}"
@@ -186,17 +295,38 @@ class MusicPlayerManager private constructor(private val context: Context) {
             .setArtworkUri(if (songInfo.coverUrl.isNotEmpty()) Uri.parse(songInfo.coverUrl) else null)
             .build()
 
+        val playUri = resolvePlayUri(songInfo.audioUrl)
+
         return MediaItem.Builder()
             .setMediaId(songKey(songInfo))
-            .setUri(songInfo.audioUrl)
+            .setUri(playUri)
             .setMediaMetadata(metadata)
             .build()
+    }
+
+    private fun resolvePlayUri(audioUrl: String): Uri {
+        if (audioUrl.startsWith("content://") || audioUrl.startsWith("file://")) {
+            return Uri.parse(audioUrl)
+        }
+        val downloadedUri = downloader.getDownloadedUri(audioUrl)
+        if (downloadedUri != null) {
+            return downloadedUri
+        }
+        return Uri.parse(audioUrl)
     }
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) = updateState()
         override fun onPlaybackStateChanged(playbackState: Int) = updateState()
-        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) = updateState()
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            updateState()
+            val ctrl = controller ?: return
+            val currentIndex = ctrl.currentMediaItemIndex
+            val song = songMap[currentIndex]
+            if (song != null && reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
+                recordHistory(song)
+            }
+        }
     }
 
     private fun updateState() {
@@ -213,6 +343,7 @@ class MusicPlayerManager private constructor(private val context: Context) {
                 )
             }
 
+        val hasMultiple = ctrl.mediaItemCount > 1
         _playerState.value = PlayerState(
             isPlaying = ctrl.isPlaying,
             currentPosition = ctrl.currentPosition.coerceAtLeast(0),
@@ -220,9 +351,11 @@ class MusicPlayerManager private constructor(private val context: Context) {
             currentSong = currentSong,
             playlistSize = ctrl.mediaItemCount,
             currentIndex = currentIndex,
-            hasNext = ctrl.hasNextMediaItem(),
-            hasPrevious = ctrl.hasPreviousMediaItem(),
-            isBuffering = ctrl.playbackState == Player.STATE_BUFFERING
+            hasNext = hasMultiple,
+            hasPrevious = hasMultiple,
+            isBuffering = ctrl.playbackState == Player.STATE_BUFFERING,
+            playlistSource = _playlistSource,
+            playMode = _playMode
         )
     }
 
