@@ -50,7 +50,7 @@ android {
 版本信息文件托管在仓库根目录，Raw URL 为：
 
 ```
-https://raw.githubusercontent.com/wxweven/even-music/main/version.json
+https://raw.githubusercontent.com/wxweven/even-music/master/version.json
 ```
 
 ## 三、每次发版操作步骤
@@ -81,7 +81,7 @@ cd android-app
 {
   "versionCode": 2,
   "versionName": "1.1.0",
-  "apkUrl": "https://github.com/wxweven/even-music/releases/download/v1.1.0/hifiti-v1.1.0.apk",
+  "apkUrl": "https://github.com/wxweven/even-music/releases/download/v1.1.0/even-music-release.apk",
   "changelog": "- 修复了搜索闪退问题\n- 优化了播放器性能",
   "forceUpdate": false
 }
@@ -111,7 +111,7 @@ git push origin main
 
 ```bash
 gh release create v1.1.0 \
-  app/build/outputs/apk/release/app-release.apk#hifiti-v1.1.0.apk \
+  app/build/outputs/apk/release/app-release.apk#even-music-release.apk \
   --title "v1.1.0" \
   --notes "- 修复了搜索闪退问题
 - 优化了播放器性能"
@@ -122,7 +122,7 @@ gh release create v1.1.0 \
 1. 打开 https://github.com/wxweven/even-music/releases/new
 2. Tag 填写 `v1.1.0`
 3. Title 填写 `v1.1.0`
-4. 在 "Attach binaries" 区域上传 APK（建议重命名为 `hifiti-v1.1.0.apk`）
+4. 在 "Attach binaries" 区域上传 APK（建议重命名为 `even-music-release.apk`）
 5. 填写更新说明
 6. 点击 "Publish release"
 

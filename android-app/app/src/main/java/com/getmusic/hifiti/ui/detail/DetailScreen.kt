@@ -148,7 +148,7 @@ private fun SongDetailContent(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(top = 48.dp)
+            .padding(top = 24.dp)
     ) {
         HorizontalPager(
             state = pagerState,
@@ -236,18 +236,16 @@ private fun CoverPage(
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(8.dp))
-
         if (detail.coverUrl.isNotEmpty()) {
             AsyncImage(
                 model = detail.coverUrl,
                 contentDescription = "专辑封面",
                 modifier = Modifier
-                    .size(240.dp)
-                    .clip(RoundedCornerShape(16.dp)),
+                    .size(180.dp)
+                    .clip(RoundedCornerShape(12.dp)),
                 contentScale = ContentScale.Crop
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         if (pageCount > 1) {
@@ -255,26 +253,37 @@ private fun CoverPage(
                 pageCount = pageCount,
                 currentPage = currentPage
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
-        Text(
-            text = detail.songName,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = detail.artist,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = detail.songName,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            Text(
+                text = " - ",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = detail.artist,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         ActionIconRow(
             uiState = uiState,
@@ -284,7 +293,7 @@ private fun CoverPage(
             onOpenPlayer = onOpenPlayer
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         PlayerControls(
             playerState = if (isCurrentSong) playerState else PlayerState(),
