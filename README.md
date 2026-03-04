@@ -6,14 +6,21 @@
 
 ### 1. Android App
 
-Kotlin + Jetpack Compose 开发的原生 Android 应用，支持搜索、预览、下载和调用外部播放器。
+Kotlin + Jetpack Compose 开发的原生 Android 应用，内置音乐播放器。
 
 ```
 cd android-app
 # 用 Android Studio 打开，连接手机运行
 ```
 
-**功能：** 搜索歌曲 → 查看详情（封面、歌词） → 下载到 Music/HiFiTi/ → 用网易云等 App 打开
+**功能：** 搜索歌曲 → 查看详情（封面、歌词） → 点击即播（流式播放） → 可选下载到 Music/HiFiTi/
+
+**播放器特性：**
+- 在线流式播放，点击即听，无需等待下载
+- 后台播放，切出 App / 锁屏后继续播放
+- 通知栏 + 锁屏界面播放控制
+- 播放列表管理，支持上一首 / 下一首
+- 迷你播放栏，搜索页底部实时显示播放状态
 
 ### 2. Chrome 插件
 
@@ -52,6 +59,6 @@ python hifiti_extractor.py URL1 URL2 URL3
 
 | 模块 | 技术 |
 |------|------|
-| Android App | Kotlin, Jetpack Compose, Material 3, OkHttp, Jsoup, Coil |
+| Android App | Kotlin, Jetpack Compose, Material 3, Media3 (ExoPlayer), OkHttp, Jsoup, Coil |
 | Chrome 插件 | Manifest V3, Content Script, Chrome Downloads API |
 | Python 脚本 | requests, BeautifulSoup4 |

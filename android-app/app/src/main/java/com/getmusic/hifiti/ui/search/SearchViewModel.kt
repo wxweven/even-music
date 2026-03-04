@@ -1,8 +1,10 @@
 package com.getmusic.hifiti.ui.search
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.getmusic.hifiti.data.HiFiTiApi
+import com.getmusic.hifiti.data.SearchHistoryManager
 import com.getmusic.hifiti.data.SearchItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,12 +22,20 @@ data class SearchUiState(
     val hasSearched: Boolean = false
 )
 
-class SearchViewModel : ViewModel() {
+class SearchViewModel(application: Application) : AndroidViewModel(application) {
 
     private val api = HiFiTiApi()
+    private val historyManager = SearchHistoryManager(application)
 
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
+
+    private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
+    val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
+
+    init {
+        _searchHistory.value = historyManager.getHistory()
+    }
 
     fun updateQuery(query: String) {
         _uiState.value = _uiState.value.copy(query = query)
@@ -34,6 +44,9 @@ class SearchViewModel : ViewModel() {
     fun search() {
         val query = _uiState.value.query.trim()
         if (query.isEmpty()) return
+
+        historyManager.addQuery(query)
+        _searchHistory.value = historyManager.getHistory()
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -58,6 +71,16 @@ class SearchViewModel : ViewModel() {
                 )
             }
         }
+    }
+
+    fun searchFromHistory(query: String) {
+        _uiState.value = _uiState.value.copy(query = query)
+        search()
+    }
+
+    fun clearHistory() {
+        historyManager.clear()
+        _searchHistory.value = emptyList()
     }
 
     fun loadMore() {

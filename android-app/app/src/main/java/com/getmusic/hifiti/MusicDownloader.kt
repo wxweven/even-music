@@ -18,6 +18,8 @@ import java.util.concurrent.TimeUnit
 
 class MusicDownloader(private val context: Context) {
 
+    private val prefs = context.getSharedPreferences("download_cache", Context.MODE_PRIVATE)
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
@@ -84,6 +86,13 @@ class MusicDownloader(private val context: Context) {
                 }
 
                 onProgress(1f)
+
+                val resultUriString = resultUri?.toString()
+                    ?: resultPath?.let { Uri.fromFile(File(it)).toString() }
+                if (resultUriString != null) {
+                    prefs.edit().putString(audioUrl, resultUriString).apply()
+                }
+
                 DownloadResult(
                     success = true,
                     filePath = resultPath,
@@ -187,6 +196,15 @@ class MusicDownloader(private val context: Context) {
             filename.endsWith(".ogg") -> "audio/ogg"
             else -> "audio/mpeg"
         }
+    }
+
+    fun getDownloadedUri(audioUrl: String): Uri? {
+        val uriString = prefs.getString(audioUrl, null) ?: return null
+        return Uri.parse(uriString)
+    }
+
+    fun isDownloaded(audioUrl: String): Boolean {
+        return prefs.contains(audioUrl)
     }
 
     /**

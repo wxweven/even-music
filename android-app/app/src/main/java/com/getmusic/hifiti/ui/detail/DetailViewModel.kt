@@ -5,11 +5,18 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.getmusic.hifiti.MusicDownloader
+import com.getmusic.hifiti.data.FavoriteSong
+import com.getmusic.hifiti.data.FavoritesManager
 import com.getmusic.hifiti.data.HiFiTiApi
 import com.getmusic.hifiti.data.SongDetail
+import com.getmusic.hifiti.player.MusicPlayerManager
+import com.getmusic.hifiti.player.PlayerState
+import com.getmusic.hifiti.player.SongInfo
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class DetailUiState(
@@ -21,26 +28,41 @@ data class DetailUiState(
     val downloadCompleted: Boolean = false,
     val downloadedUri: Uri? = null,
     val downloadedPath: String? = null,
-    val downloadError: String? = null
+    val downloadError: String? = null,
+    val isFavorite: Boolean = false
 )
 
 class DetailViewModel(application: Application) : AndroidViewModel(application) {
 
     private val api = HiFiTiApi()
     private val downloader = MusicDownloader(application)
+    private val favoritesManager = FavoritesManager(application)
+    val playerManager = MusicPlayerManager.getInstance(application)
 
     private val _uiState = MutableStateFlow(DetailUiState())
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
 
+    val playerState: StateFlow<PlayerState> = playerManager.playerState
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PlayerState())
+
+    private var currentThreadId: String = ""
+
     fun loadDetail(threadId: String) {
+        currentThreadId = threadId
         viewModelScope.launch {
             _uiState.value = DetailUiState(isLoading = true)
 
             try {
                 val detail = api.getDetail(threadId)
+                val audioUrl = detail.realAudioUrl ?: detail.audioUrl
+                val alreadyDownloaded = audioUrl.isNotEmpty() && downloader.isDownloaded(audioUrl)
+
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    songDetail = detail
+                    songDetail = detail,
+                    downloadCompleted = alreadyDownloaded,
+                    downloadedUri = if (alreadyDownloaded) downloader.getDownloadedUri(audioUrl) else null,
+                    isFavorite = favoritesManager.isFavorite(threadId)
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -49,6 +71,41 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
                 )
             }
         }
+    }
+
+    fun play() {
+        val detail = _uiState.value.songDetail ?: return
+        val audioUrl = detail.realAudioUrl ?: detail.audioUrl
+        if (audioUrl.isEmpty()) return
+
+        val localUri = downloader.getDownloadedUri(audioUrl)
+        val playUrl = localUri?.toString() ?: audioUrl
+
+        val songInfo = SongInfo(
+            title = detail.songName,
+            artist = detail.artist,
+            coverUrl = detail.coverUrl,
+            audioUrl = playUrl,
+            threadId = currentThreadId
+        )
+
+        playerManager.play(songInfo)
+    }
+
+    fun togglePlayPause() {
+        playerManager.togglePlayPause()
+    }
+
+    fun seekTo(positionMs: Long) {
+        playerManager.seekTo(positionMs)
+    }
+
+    fun skipToNext() {
+        playerManager.skipToNext()
+    }
+
+    fun skipToPrevious() {
+        playerManager.skipToPrevious()
     }
 
     fun download() {
@@ -99,5 +156,20 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
                 downloadError = "无法打开音乐播放器: ${e.message}"
             )
         }
+    }
+
+    fun toggleFavorite() {
+        val detail = _uiState.value.songDetail ?: return
+        val audioUrl = detail.realAudioUrl ?: detail.audioUrl
+
+        val song = FavoriteSong(
+            threadId = currentThreadId,
+            title = detail.songName,
+            artist = detail.artist,
+            coverUrl = detail.coverUrl,
+            audioUrl = audioUrl
+        )
+        val nowFavorite = favoritesManager.toggle(song)
+        _uiState.value = _uiState.value.copy(isFavorite = nowFavorite)
     }
 }

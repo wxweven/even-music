@@ -6,4 +6,7 @@
     <files-path
         name="internal_music"
         path="music/" />
+    <cache-path
+        name="apk_cache"
+        path="apk/" />
 </paths>

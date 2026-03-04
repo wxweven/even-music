@@ -120,9 +120,12 @@ class HiFiTiApi {
         var lyrics: String? = null
         for (h5 in doc.select("h5")) {
             if (h5.text().contains("歌词")) {
-                val lyricsP = h5.nextElementSibling()
-                if (lyricsP != null && lyricsP.tagName() == "p") {
-                    lyrics = lyricsP.html()
+                var sibling = h5.nextElementSibling()
+                while (sibling != null && sibling.tagName() != "p" && sibling.tagName() != "h5") {
+                    sibling = sibling.nextElementSibling()
+                }
+                if (sibling != null && sibling.tagName() == "p") {
+                    lyrics = sibling.html()
                         .replace("<br>", "\n")
                         .replace("<br/>", "\n")
                         .replace("<br />", "\n")
