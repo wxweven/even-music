@@ -9,12 +9,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -30,6 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -41,7 +45,6 @@ import androidx.navigation.navArgument
 import com.getmusic.hifiti.player.MusicPlayerManager
 import com.getmusic.hifiti.ui.detail.DetailScreen
 import com.getmusic.hifiti.ui.my.MyScreen
-import com.getmusic.hifiti.ui.player.MiniPlayerBar
 import com.getmusic.hifiti.ui.search.SearchScreen
 import com.getmusic.hifiti.ui.settings.SettingsScreen
 import com.getmusic.hifiti.ui.theme.HiFiTiTheme
@@ -127,58 +130,64 @@ fun HiFiTiApp(playerManager: MusicPlayerManager) {
         )
     }
 
-    val isDetailRoute = currentRoute == "detail/{threadId}"
     val isOnTabRoute = currentRoute == "search" || currentRoute == "my"
+    val hasPlayingSong = playerState.currentSong != null
 
     Scaffold(
         bottomBar = {
-            Column {
-                if (!isDetailRoute) {
-                    MiniPlayerBar(
-                        playerState = playerState,
-                        onPlayPause = { playerManager.togglePlayPause() },
-                        onClose = { playerManager.stop() },
-                        onClick = {
-                            val threadId = playerState.currentSong?.threadId
-                            if (!threadId.isNullOrEmpty()) {
-                                navController.navigate("detail/$threadId") {
-                                    launchSingleTop = true
-                                }
+            NavigationBar {
+                NavigationBarItem(
+                    selected = currentRoute == "search",
+                    onClick = {
+                        navController.navigate("search") {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = isOnTabRoute
+                            }
+                            launchSingleTop = true
+                            restoreState = isOnTabRoute
+                        }
+                    },
+                    icon = { Icon(Icons.Default.Home, contentDescription = "首页") },
+                    label = { Text("首页") }
+                )
+                NavigationBarItem(
+                    selected = currentRoute == "detail/{threadId}",
+                    enabled = hasPlayingSong,
+                    onClick = {
+                        val threadId = playerState.currentSong?.threadId
+                        if (!threadId.isNullOrEmpty()) {
+                            navController.navigate("detail/$threadId") {
+                                launchSingleTop = true
                             }
                         }
-                    )
-                }
-
-                NavigationBar {
-                    NavigationBarItem(
-                        selected = currentRoute == "search",
-                        onClick = {
-                            navController.navigate("search") {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = isOnTabRoute
+                    },
+                    icon = {
+                        BadgedBox(
+                            badge = {
+                                if (playerState.isPlaying) {
+                                    Badge(modifier = Modifier.size(8.dp))
                                 }
-                                launchSingleTop = true
-                                restoreState = isOnTabRoute
                             }
-                        },
-                        icon = { Icon(Icons.Default.Home, contentDescription = "首页") },
-                        label = { Text("首页") }
-                    )
-                    NavigationBarItem(
-                        selected = currentRoute == "my",
-                        onClick = {
-                            navController.navigate("my") {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = isOnTabRoute
-                                }
-                                launchSingleTop = true
-                                restoreState = isOnTabRoute
+                        ) {
+                            Icon(Icons.Default.MusicNote, contentDescription = "播放")
+                        }
+                    },
+                    label = { Text("播放") }
+                )
+                NavigationBarItem(
+                    selected = currentRoute == "my",
+                    onClick = {
+                        navController.navigate("my") {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = isOnTabRoute
                             }
-                        },
-                        icon = { Icon(Icons.Default.Person, contentDescription = "我的") },
-                        label = { Text("我的") }
-                    )
-                }
+                            launchSingleTop = true
+                            restoreState = isOnTabRoute
+                        }
+                    },
+                    icon = { Icon(Icons.Default.Person, contentDescription = "我的") },
+                    label = { Text("我的") }
+                )
             }
         }
     ) { paddingValues ->
