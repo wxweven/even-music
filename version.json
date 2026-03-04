@@ -1,7 +1,7 @@
 {
   "versionCode": 1,
   "versionName": "1.0.0",
-  "apkUrl": "",
-  "changelog": "初始版本",
+  "apkUrl": "https://github.com/wxweven/even-music/releases/download/v1.0.0/hifiti-v1.0.0.apk",
+  "changelog": "- 搜索并下载 HiFiTi 高品质音乐\n- 在线播放与歌词显示\n- 收藏管理与搜索历史\n- 应用内自动升级",
   "forceUpdate": false
 }

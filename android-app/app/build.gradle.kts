@@ -13,6 +13,10 @@ val localProperties = Properties().apply {
     }
 }
 
+base {
+    archivesName.set("even-music")
+}
+
 android {
     namespace = "com.getmusic.hifiti"
     compileSdk = 34
