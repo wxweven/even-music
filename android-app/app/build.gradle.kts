@@ -40,7 +40,7 @@ android {
         versionCode = 3
         versionName = "1.1.1"
 
-        buildConfigField("String", "UPDATE_URL", "\"https://raw.githubusercontent.com/wxweven/even-music/main/version.json\"")
+        buildConfigField("String", "UPDATE_URL", "\"https://raw.githubusercontent.com/wxweven/even-music/master/version.json\"")
     }
 
     buildTypes {

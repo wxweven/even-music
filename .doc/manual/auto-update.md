@@ -102,7 +102,7 @@ cd android-app
 ```bash
 git add version.json
 git commit -m "release: v1.1.0"
-git push origin main
+git push origin master
 ```
 
 ### 步骤 5：创建 GitHub Release 并上传 APK
@@ -128,7 +128,7 @@ gh release create v1.1.0 \
 
 ### 步骤 6：验证
 
-- 确认 `version.json` 可访问：`https://raw.githubusercontent.com/wxweven/even-music/main/version.json`
+- 确认 `version.json` 可访问：`https://raw.githubusercontent.com/wxweven/even-music/master/version.json`
 - 确认 APK 可下载：点击 Release 页面的 APK 链接
 - 在旧版本 App 上验证弹出更新提示
 
@@ -151,4 +151,4 @@ gh release create v1.1.0 \
 - [ ] 使用的是同一个 keystore 签名
 - [ ] `version.json` 中的 `versionCode` 和 `apkUrl` 正确
 - [ ] GitHub Release 已创建且 APK 已上传
-- [ ] `version.json` 已推送到 main 分支
+- [ ] `version.json` 已推送到 master 分支
