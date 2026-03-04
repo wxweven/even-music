@@ -61,8 +61,8 @@ https://raw.githubusercontent.com/wxweven/even-music/master/version.json
 
 ```kotlin
 defaultConfig {
-    versionCode = 2          // 每次 +1，系统靠这个判断是否需要升级
-    versionName = "1.1.0"    // 给用户看的版本号
+    versionCode = 3          // 每次 +1，系统靠这个判断是否需要升级
+    versionName = "1.1.1"    // 给用户看的版本号
 }
 ```
 
@@ -73,16 +73,16 @@ cd android-app
 ./gradlew assembleRelease
 ```
 
-构建产物在：`app/build/outputs/apk/release/app-release.apk`
+构建产物在：`app/build/outputs/apk/release/even-music-release.apk`
 
 ### 步骤 3：更新仓库根目录的 version.json
 
 ```json
 {
-  "versionCode": 2,
-  "versionName": "1.1.0",
-  "apkUrl": "https://github.com/wxweven/even-music/releases/download/v1.1.0/even-music-release.apk",
-  "changelog": "- 修复了搜索闪退问题\n- 优化了播放器性能",
+  "versionCode": 3,
+  "versionName": "1.1.1",
+  "apkUrl": "https://github.com/wxweven/even-music/releases/download/v1.1.1/even-music-release.apk",
+  "changelog": "- 详情页 UI 优化：封面尺寸调整，歌曲名与歌手名同行显示\n- 详情页间距优化，信息展示更紧凑",
   "forceUpdate": false
 }
 ```
@@ -101,7 +101,7 @@ cd android-app
 
 ```bash
 git add version.json
-git commit -m "release: v1.1.0"
+git commit -m "release: v1.1.1"
 git push origin master
 ```
 
@@ -110,18 +110,18 @@ git push origin master
 **方式一：使用 gh 命令行（推荐）**
 
 ```bash
-gh release create v1.1.0 \
-  app/build/outputs/apk/release/app-release.apk#even-music-release.apk \
-  --title "v1.1.0" \
-  --notes "- 修复了搜索闪退问题
-- 优化了播放器性能"
+gh release create v1.1.1 \
+  app/build/outputs/apk/release/even-music-release.apk \
+  --title "v1.1.1" \
+  --notes "- 详情页 UI 优化：封面尺寸调整，歌曲名与歌手名同行显示
+- 详情页间距优化，信息展示更紧凑"
 ```
 
 **方式二：GitHub 网页操作**
 
 1. 打开 https://github.com/wxweven/even-music/releases/new
-2. Tag 填写 `v1.1.0`
-3. Title 填写 `v1.1.0`
+2. Tag 填写 `v1.1.1`
+3. Title 填写 `v1.1.1`
 4. 在 "Attach binaries" 区域上传 APK（建议重命名为 `even-music-release.apk`）
 5. 填写更新说明
 6. 点击 "Publish release"
