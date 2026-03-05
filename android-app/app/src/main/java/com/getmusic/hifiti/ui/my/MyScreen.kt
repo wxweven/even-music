@@ -1,8 +1,5 @@
 package com.getmusic.hifiti.ui.my
 
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,10 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -29,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,9 +31,6 @@ import coil.compose.AsyncImage
 import com.getmusic.hifiti.data.FavoriteSong
 import com.getmusic.hifiti.data.PlayHistoryItem
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -49,49 +39,14 @@ fun MyScreen(
     onNavigateToSettings: () -> Unit = {},
     viewModel: MyViewModel = viewModel()
 ) {
-    val context = LocalContext.current
     val favorites by viewModel.favorites.collectAsState()
     val playHistory by viewModel.playHistory.collectAsState()
-    val pendingImportSongs by viewModel.pendingImportSongs.collectAsState()
     val pagerState = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
     var showClearDialog by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
-
-    val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        uri?.let { viewModel.exportFavorites(it) }
-    }
-
-    val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let { viewModel.readImportFile(it) }
-    }
 
     LaunchedEffect(Unit) {
         viewModel.refreshAll()
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.exportResult.collect { result ->
-            result.onSuccess { count ->
-                Toast.makeText(context, "已导出 $count 首歌曲", Toast.LENGTH_SHORT).show()
-            }.onFailure { e ->
-                Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.importResult.collect { result ->
-            result.onSuccess { count ->
-                Toast.makeText(context, "成功导入 $count 首新歌曲", Toast.LENGTH_SHORT).show()
-            }.onFailure { e ->
-                Toast.makeText(context, "导入失败: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     if (showClearDialog) {
@@ -115,55 +70,11 @@ fun MyScreen(
         )
     }
 
-    if (pendingImportSongs.isNotEmpty()) {
-        ImportStrategyDialog(
-            songCount = pendingImportSongs.size,
-            onMerge = { viewModel.confirmImport(replace = false) },
-            onReplace = { viewModel.confirmImport(replace = true) },
-            onDismiss = { viewModel.cancelImport() }
-        )
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("我的") },
                 actions = {
-                    if (pagerState.currentPage == 0) {
-                        Box {
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "更多")
-                            }
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("导出收藏") },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.FileUpload, contentDescription = null)
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        val timestamp = SimpleDateFormat(
-                                            "yyyyMMdd_HHmmss", Locale.getDefault()
-                                        ).format(Date())
-                                        exportLauncher.launch("favorites_$timestamp.json")
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("导入收藏") },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.FileDownload, contentDescription = null)
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        importLauncher.launch(arrayOf("application/json", "*/*"))
-                                    }
-                                )
-                            }
-                        }
-                    }
                     if (pagerState.currentPage == 1 && playHistory.isNotEmpty()) {
                         IconButton(onClick = { showClearDialog = true }) {
                             Icon(
@@ -233,37 +144,6 @@ fun MyScreen(
             }
         }
     }
-}
-
-@Composable
-private fun ImportStrategyDialog(
-    songCount: Int,
-    onMerge: () -> Unit,
-    onReplace: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("导入收藏") },
-        text = {
-            Text("检测到 $songCount 首歌曲，请选择导入方式：")
-        },
-        confirmButton = {
-            TextButton(onClick = onMerge) {
-                Text("合并")
-            }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onDismiss) {
-                    Text("取消")
-                }
-                TextButton(onClick = onReplace) {
-                    Text("覆盖")
-                }
-            }
-        }
-    )
 }
 
 @Composable

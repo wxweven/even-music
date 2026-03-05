@@ -166,7 +166,10 @@ class HiFiTiExtractor:
         """
         获取真实的音频文件 URL
         
-        访问 getmusic.htm 可能会重定向到真实的音频文件
+        访问 getmusic.htm，从 302 响应的 Location 头获取 CDN URL，
+        不下载实际音频文件。
+        
+        注意：CDN URL 有时效性（约1-2小时），不应长期缓存。
         
         Args:
             getmusic_url: getmusic.htm 的 URL
@@ -175,8 +178,10 @@ class HiFiTiExtractor:
             真实的音频文件 URL
         """
         try:
-            response = self.session.get(getmusic_url, allow_redirects=True)
-            return response.url
+            response = self.session.get(getmusic_url, allow_redirects=False)
+            if response.status_code in (301, 302, 303, 307, 308):
+                return response.headers.get('Location')
+            return None
         except Exception as e:
             print(f"获取音频文件 URL 失败: {e}")
             return None

@@ -47,9 +47,6 @@ class MusicDownloader(private val context: Context) {
         onProgress: (Float) -> Unit
     ): DownloadResult = withContext(Dispatchers.IO) {
         try {
-            val ext = detectExtension(audioUrl)
-            val filename = sanitizeFilename("$artist - $songName$ext")
-
             val request = Request.Builder()
                 .url(audioUrl)
                 .header("User-Agent", userAgent)
@@ -65,6 +62,11 @@ class MusicDownloader(private val context: Context) {
 
                 val body = response.body
                     ?: return@withContext DownloadResult(success = false, error = "空响应")
+
+                val finalUrl = response.request.url.toString()
+                val contentType = response.header("Content-Type") ?: ""
+                val ext = detectExtensionFromResponse(finalUrl, contentType)
+                val filename = sanitizeFilename("$artist - $songName$ext")
 
                 val totalBytes = body.contentLength()
                 var downloadedBytes = 0L
@@ -176,12 +178,18 @@ class MusicDownloader(private val context: Context) {
         openInMusicApp(uri)
     }
 
-    private fun detectExtension(url: String): String {
-        val lower = url.lowercase()
+    private fun detectExtensionFromResponse(finalUrl: String, contentType: String): String {
+        val lowerUrl = finalUrl.lowercase()
         for (ext in listOf(".flac", ".m4a", ".wav", ".aac", ".ogg", ".mp3")) {
-            if (ext in lower) return ext
+            if (ext in lowerUrl) return ext
         }
-        return ".mp3"
+        return when {
+            "flac" in contentType.lowercase() -> ".flac"
+            "mp4" in contentType.lowercase() || "m4a" in contentType.lowercase() -> ".m4a"
+            "wav" in contentType.lowercase() -> ".wav"
+            "ogg" in contentType.lowercase() -> ".ogg"
+            else -> ".mp3"
+        }
     }
 
     private fun sanitizeFilename(name: String): String {

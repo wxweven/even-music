@@ -76,7 +76,6 @@ class SongDetailCache(context: Context) {
             put("audioUrl", detail.audioUrl)
             put("coverUrl", detail.coverUrl)
             put("lyrics", detail.lyrics ?: "")
-            put("realAudioUrl", detail.realAudioUrl ?: "")
         }.toString()
     }
 
@@ -88,7 +87,7 @@ class SongDetailCache(context: Context) {
             audioUrl = obj.getString("audioUrl"),
             coverUrl = obj.getString("coverUrl"),
             lyrics = obj.optString("lyrics", "").ifEmpty { null },
-            realAudioUrl = obj.optString("realAudioUrl", "").ifEmpty { null }
+            realAudioUrl = null
         )
     }
 

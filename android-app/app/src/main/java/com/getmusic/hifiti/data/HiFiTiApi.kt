@@ -136,30 +136,28 @@ class HiFiTiApi {
             }
         }
 
-        // Resolve the real audio URL by following the redirect
-        val realAudioUrl = if (audioUrl.isNotEmpty()) {
-            resolveAudioUrl(audioUrl)
-        } else null
-
         SongDetail(
             songName = songName,
             artist = artist,
             audioUrl = audioUrl,
             coverUrl = coverUrl,
             lyrics = lyrics,
-            realAudioUrl = realAudioUrl
+            realAudioUrl = null
         )
     }
 
     /**
-     * Follow the getmusic.htm redirect to get the real audio file URL.
-     * We make a HEAD request with no auto-redirect to capture the Location header,
-     * or a GET request with redirect following.
+     * Follow the getmusic.htm 302 redirect to get the real audio file URL.
+     * Uses followRedirects(false) to capture the Location header without
+     * downloading the actual audio file.
+     *
+     * The CDN URL has a time-limited token (~1-2 hours), so callers should
+     * NOT cache the result long-term. Resolve on demand before each use.
      */
     suspend fun resolveAudioUrl(getmusicUrl: String): String? = withContext(Dispatchers.IO) {
         try {
             val noRedirectClient = client.newBuilder()
-                .followRedirects(true)
+                .followRedirects(false)
                 .build()
 
             val request = Request.Builder()
@@ -168,7 +166,11 @@ class HiFiTiApi {
                 .build()
 
             noRedirectClient.newCall(request).execute().use { response ->
-                response.request.url.toString()
+                if (response.isRedirect) {
+                    response.header("Location")
+                } else {
+                    null
+                }
             }
         } catch (e: Exception) {
             null

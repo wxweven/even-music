@@ -11,13 +11,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -162,15 +159,7 @@ fun HiFiTiApp(playerManager: MusicPlayerManager) {
                         }
                     },
                     icon = {
-                        BadgedBox(
-                            badge = {
-                                if (playerState.isPlaying) {
-                                    Badge(modifier = Modifier.size(8.dp))
-                                }
-                            }
-                        ) {
-                            Icon(Icons.Default.MusicNote, contentDescription = "播放")
-                        }
+                        Icon(Icons.Default.MusicNote, contentDescription = "播放")
                     },
                     label = { Text("播放") }
                 )

@@ -71,7 +71,7 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
 
         val cached = detailCache.get(threadId)
         if (cached != null) {
-            val audioUrl = cached.realAudioUrl ?: cached.audioUrl
+            val audioUrl = cached.audioUrl
             val alreadyDownloaded = audioUrl.isNotEmpty() && downloader.isDownloaded(audioUrl)
             _uiState.value = DetailUiState(
                 isLoading = false,
@@ -94,7 +94,7 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
 
         val cached = detailCache.get(song.threadId)
         if (cached != null) {
-            val audioUrl = cached.realAudioUrl ?: cached.audioUrl
+            val audioUrl = cached.audioUrl
             val alreadyDownloaded = audioUrl.isNotEmpty() && downloader.isDownloaded(audioUrl)
             _uiState.value = DetailUiState(
                 isLoading = false,
@@ -112,7 +112,7 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
             audioUrl = song.audioUrl,
             coverUrl = song.coverUrl,
             lyrics = null,
-            realAudioUrl = song.audioUrl
+            realAudioUrl = null
         )
         _uiState.value = DetailUiState(
             isLoading = false,
@@ -129,7 +129,7 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
             val detail = api.getDetail(threadId)
             detailCache.put(threadId, detail)
 
-            val audioUrl = detail.realAudioUrl ?: detail.audioUrl
+            val audioUrl = detail.audioUrl
             val alreadyDownloaded = audioUrl.isNotEmpty() && downloader.isDownloaded(audioUrl)
 
             _uiState.value = _uiState.value.copy(
@@ -152,7 +152,7 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
 
     fun play() {
         val detail = _uiState.value.songDetail ?: return
-        val audioUrl = detail.realAudioUrl ?: detail.audioUrl
+        val audioUrl = detail.audioUrl
         if (audioUrl.isEmpty()) return
 
         val localUri = downloader.getDownloadedUri(audioUrl)
@@ -191,7 +191,7 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
 
     fun download() {
         val detail = _uiState.value.songDetail ?: return
-        val audioUrl = detail.realAudioUrl ?: detail.audioUrl
+        val audioUrl = detail.audioUrl
         if (audioUrl.isEmpty()) return
 
         viewModelScope.launch {
@@ -241,7 +241,7 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
 
     fun toggleFavorite() {
         val detail = _uiState.value.songDetail ?: return
-        val audioUrl = detail.realAudioUrl ?: detail.audioUrl
+        val audioUrl = detail.audioUrl
 
         val song = FavoriteSong(
             threadId = currentThreadId,
