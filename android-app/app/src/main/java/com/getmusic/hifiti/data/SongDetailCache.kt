@@ -91,6 +91,11 @@ class SongDetailCache(context: Context) {
         )
     }
 
+    fun clear() {
+        memoryCache.clear()
+        prefs.edit().clear().apply()
+    }
+
     companion object {
         private const val KEY_IDS = "cached_ids"
         private const val MAX_MEMORY = 50

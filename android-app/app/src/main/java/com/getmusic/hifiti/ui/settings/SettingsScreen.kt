@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import com.getmusic.hifiti.BuildConfig
 import com.getmusic.hifiti.data.FavoriteSong
 import com.getmusic.hifiti.data.FavoritesManager
+import com.getmusic.hifiti.data.SongDetailCache
+import com.getmusic.hifiti.player.AudioCache
 import com.getmusic.hifiti.ui.update.UpdateDialog
 import com.getmusic.hifiti.update.AppUpdater
 import com.getmusic.hifiti.update.DownloadState
@@ -48,6 +51,8 @@ fun SettingsScreen(
     var downloadedApkFile by remember { mutableStateOf<java.io.File?>(null) }
     var isChecking by remember { mutableStateOf(false) }
     var pendingImportSongs by remember { mutableStateOf<List<FavoriteSong>>(emptyList()) }
+    var showClearCacheDialog by remember { mutableStateOf(false) }
+    var cacheSize by remember { mutableStateOf(AudioCache.getCacheSize(context)) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -167,6 +172,34 @@ fun SettingsScreen(
         )
     }
 
+    if (showClearCacheDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCacheDialog = false },
+            title = { Text("清除缓存") },
+            text = { Text("将清除音频播放缓存和歌曲详情缓存，不会影响收藏和播放历史。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            AudioCache.clear(context)
+                            SongDetailCache(context).clear()
+                        }
+                        cacheSize = 0L
+                        showClearCacheDialog = false
+                        Toast.makeText(context, "缓存已清除", Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCacheDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -259,6 +292,42 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
+                    text = "缓存",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    )
+                ) {
+                    ListItem(
+                        headlineContent = { Text("清除缓存") },
+                        supportingContent = { Text("音频缓存和歌曲详情缓存") },
+                        leadingContent = {
+                            Icon(
+                                Icons.Default.DeleteSweep,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        trailingContent = {
+                            Text(
+                                text = formatFileSize(cacheSize),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        modifier = Modifier.clickable { showClearCacheDialog = true }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
                     text = "关于",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
@@ -343,6 +412,16 @@ fun SettingsScreen(
             )
         }
     }
+}
+
+private fun formatFileSize(bytes: Long): String {
+    if (bytes < 1024) return "$bytes B"
+    val kb = bytes / 1024.0
+    if (kb < 1024) return "%.1f KB".format(kb)
+    val mb = kb / 1024.0
+    if (mb < 1024) return "%.1f MB".format(mb)
+    val gb = mb / 1024.0
+    return "%.2f GB".format(gb)
 }
 
 @Composable

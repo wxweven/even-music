@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.getmusic.hifiti.MusicDownloader
+import com.getmusic.hifiti.data.AudioUrlCache
 import com.getmusic.hifiti.data.FavoriteSong
 import com.getmusic.hifiti.data.FavoritesManager
 import com.getmusic.hifiti.data.HiFiTiApi
@@ -71,20 +72,23 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
 
         val cached = detailCache.get(threadId)
         if (cached != null) {
-            val audioUrl = cached.audioUrl
+            val freshUrl = AudioUrlCache.get(threadId)
+            val effectiveDetail = if (freshUrl != null) cached.copy(audioUrl = freshUrl) else cached
+            val audioUrl = effectiveDetail.audioUrl
             val alreadyDownloaded = audioUrl.isNotEmpty() && downloader.isDownloaded(audioUrl)
             _uiState.value = DetailUiState(
                 isLoading = false,
-                songDetail = cached,
+                songDetail = effectiveDetail,
                 downloadCompleted = alreadyDownloaded,
                 downloadedUri = if (alreadyDownloaded) downloader.getDownloadedUri(audioUrl) else null,
                 isFavorite = favoritesManager.isFavorite(threadId)
             )
-            return
+            if (freshUrl != null) return
+        } else {
+            _uiState.value = DetailUiState(isLoading = true)
         }
 
         viewModelScope.launch {
-            _uiState.value = DetailUiState(isLoading = true)
             fetchDetail(threadId)
         }
     }
@@ -94,31 +98,34 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
 
         val cached = detailCache.get(song.threadId)
         if (cached != null) {
-            val audioUrl = cached.audioUrl
+            val freshUrl = AudioUrlCache.get(song.threadId)
+            val effectiveDetail = if (freshUrl != null) cached.copy(audioUrl = freshUrl) else cached
+            val audioUrl = effectiveDetail.audioUrl
             val alreadyDownloaded = audioUrl.isNotEmpty() && downloader.isDownloaded(audioUrl)
             _uiState.value = DetailUiState(
                 isLoading = false,
-                songDetail = cached,
+                songDetail = effectiveDetail,
                 downloadCompleted = alreadyDownloaded,
                 downloadedUri = if (alreadyDownloaded) downloader.getDownloadedUri(audioUrl) else null,
                 isFavorite = favoritesManager.isFavorite(song.threadId)
             )
-            return
+            if (freshUrl != null) return
+        } else {
+            val placeholder = SongDetail(
+                songName = song.title,
+                artist = song.artist,
+                audioUrl = song.audioUrl,
+                coverUrl = song.coverUrl,
+                lyrics = null,
+                realAudioUrl = null
+            )
+            _uiState.value = DetailUiState(
+                isLoading = false,
+                songDetail = placeholder,
+                isFavorite = favoritesManager.isFavorite(song.threadId)
+            )
         }
 
-        val placeholder = SongDetail(
-            songName = song.title,
-            artist = song.artist,
-            audioUrl = song.audioUrl,
-            coverUrl = song.coverUrl,
-            lyrics = null,
-            realAudioUrl = null
-        )
-        _uiState.value = DetailUiState(
-            isLoading = false,
-            songDetail = placeholder,
-            isFavorite = favoritesManager.isFavorite(song.threadId)
-        )
         viewModelScope.launch {
             fetchDetail(song.threadId)
         }
@@ -128,6 +135,7 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
         try {
             val detail = api.getDetail(threadId)
             detailCache.put(threadId, detail)
+            AudioUrlCache.put(threadId, detail.audioUrl)
 
             val audioUrl = detail.audioUrl
             val alreadyDownloaded = audioUrl.isNotEmpty() && downloader.isDownloaded(audioUrl)

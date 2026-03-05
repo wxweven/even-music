@@ -9,12 +9,14 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,6 +46,31 @@ fun MyScreen(
     val pagerState = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
     var showClearDialog by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(pagerState.currentPage) {
+        searchQuery = ""
+    }
+
+    val filteredFavorites by remember(favorites, searchQuery) {
+        derivedStateOf {
+            if (searchQuery.isBlank()) favorites
+            else favorites.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                    it.artist.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    val filteredHistory by remember(playHistory, searchQuery) {
+        derivedStateOf {
+            if (searchQuery.isBlank()) playHistory
+            else playHistory.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                    it.artist.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.refreshAll()
@@ -112,32 +139,65 @@ fun MyScreen(
                 )
             }
 
+            val currentList = if (pagerState.currentPage == 0) favorites else playHistory
+            if (currentList.isNotEmpty()) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    placeholder = { Text("搜索歌名或歌手") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp))
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "清除", modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(24.dp),
+                    textStyle = MaterialTheme.typography.bodyMedium
+                )
+            }
+
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize()
             ) { page ->
                 when (page) {
                     0 -> FavoritesTab(
-                        favorites = favorites,
+                        favorites = filteredFavorites,
                         onPlayAll = {
                             viewModel.playAllFavorites()
                             favorites.firstOrNull()?.let { onNavigateToDetail(it.threadId) }
                         },
-                        onPlayAt = { index ->
-                            viewModel.playFavoriteAt(index)
-                            favorites.getOrNull(index)?.let { onNavigateToDetail(it.threadId) }
+                        onPlayAt = { filteredIndex ->
+                            val song = filteredFavorites.getOrNull(filteredIndex) ?: return@FavoritesTab
+                            val originalIndex = favorites.indexOfFirst { it.threadId == song.threadId }
+                            if (originalIndex >= 0) {
+                                viewModel.playFavoriteAt(originalIndex)
+                                onNavigateToDetail(song.threadId)
+                            }
                         },
                         onRemove = viewModel::removeFavorite
                     )
                     1 -> HistoryTab(
-                        history = playHistory,
+                        history = filteredHistory,
                         onPlayAll = {
                             viewModel.playAllHistory()
                             playHistory.firstOrNull()?.let { onNavigateToDetail(it.threadId) }
                         },
-                        onPlayAt = { index ->
-                            viewModel.playHistoryAt(index)
-                            playHistory.getOrNull(index)?.let { onNavigateToDetail(it.threadId) }
+                        onPlayAt = { filteredIndex ->
+                            val item = filteredHistory.getOrNull(filteredIndex) ?: return@HistoryTab
+                            val originalIndex = playHistory.indexOfFirst { it.threadId == item.threadId }
+                            if (originalIndex >= 0) {
+                                viewModel.playHistoryAt(originalIndex)
+                                onNavigateToDetail(item.threadId)
+                            }
                         }
                     )
                 }

@@ -54,6 +54,15 @@ class FavoritesManager(context: Context) {
         return getAll().any { it.threadId == threadId }
     }
 
+    fun updateAudioUrl(threadId: String, newUrl: String) {
+        val list = getAll().toMutableList()
+        val index = list.indexOfFirst { it.threadId == threadId }
+        if (index >= 0) {
+            list[index] = list[index].copy(audioUrl = newUrl)
+            save(list)
+        }
+    }
+
     fun toggle(song: FavoriteSong): Boolean {
         return if (isFavorite(song.threadId)) {
             remove(song.threadId)

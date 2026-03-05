@@ -45,6 +45,15 @@ class PlayHistoryManager(context: Context) {
         save(limited)
     }
 
+    fun updateAudioUrl(threadId: String, newUrl: String) {
+        val list = getAll().toMutableList()
+        val index = list.indexOfFirst { it.threadId == threadId }
+        if (index >= 0) {
+            list[index] = list[index].copy(audioUrl = newUrl)
+            save(list)
+        }
+    }
+
     fun clear() {
         prefs.edit().remove(KEY_HISTORY).apply()
     }

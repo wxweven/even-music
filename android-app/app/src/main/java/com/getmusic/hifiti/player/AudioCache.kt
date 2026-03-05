@@ -36,4 +36,19 @@ object AudioCache {
             cache = null
         }
     }
+
+    fun clear(context: Context) {
+        synchronized(this) {
+            cache?.release()
+            cache = null
+            val cacheDir = File(context.cacheDir, "audio_cache")
+            cacheDir.deleteRecursively()
+        }
+    }
+
+    fun getCacheSize(context: Context): Long {
+        val cacheDir = File(context.cacheDir, "audio_cache")
+        if (!cacheDir.exists()) return 0L
+        return cacheDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+    }
 }
