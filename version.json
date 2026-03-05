@@ -1,7 +1,7 @@
 {
-  "versionCode": 5,
-  "versionName": "1.1.3",
-  "apkUrl": "https://github.com/wxweven/even-music/releases/download/v1.1.3/even-music-release.apk",
-  "changelog": "- 底部导航栏新增播放入口，替换浮动播放条\n- 播放中显示小红点提示\n- 移除 MiniPlayerBar，界面更简洁",
+  "versionCode": 6,
+  "versionName": "1.1.4",
+  "apkUrl": "https://github.com/wxweven/even-music/releases/download/v1.1.4/even-music-release.apk",
+  "changelog": "- 修复歌曲无法播放和下载的问题\n- 新增设置页面，支持查看版本号和手动检查更新\n- 底部导航栏新增播放入口，替换浮动播放条\n- 播放中显示小红点提示\n- 修复从详情页点击底部导航无法返回的问题",
   "forceUpdate": false
 }
